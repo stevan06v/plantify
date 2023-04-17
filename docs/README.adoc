@@ -66,6 +66,8 @@ below
  
 == CODE ⚗️
 
+=== Main.py
+
 [source, python]
 ----
 
@@ -90,6 +92,29 @@ while True:
     utime.sleep(readDelay) # set a delay between readings
     
 ----
+
+* EXPLANATION 
+** .
+** .
+
+=== Calibrator.py
+
+[source, python]
+----
+
+# import required modules
+from machine import ADC, Pin
+import utime
+
+# use variables instead of numbers:
+soil = ADC(Pin(26)) # Soil moisture PIN reference
+
+----
+
+* EXPLANATION 
+** .
+** .
+
 
 == MATH 🧮
 
