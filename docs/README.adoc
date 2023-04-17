@@ -9,6 +9,9 @@ Stevan Vlajic
 :experimental:
 
 
+== TECHNOLOGIES ⚙️
+
+
 == COMPONENTS 🦴
 
 
@@ -28,7 +31,7 @@ image:./img/soil.png[300, 200]
 [TIP]
 https://www.amazon.com/Gikfun-Capacitive-Corrosion-Resistant-Detection/dp/B07H3P1NRM[CAPACATIVE SOIL] | GET IT
 
-=== MICRO-PYTHON 🐍
+=== MICRO-PYTHON 
 
 image:./img/micro-python.png[300, 200]
 
@@ -56,7 +59,7 @@ image:./img/pinned.jpg[400, 300]
 * Run twice -> Wait -> Copy the values 
 below
 ** First run: dry-value output
-** Second run: wet-value outpu
+** Second run: wet-value output
 * Assign:
 ** dry_value = `CRTL + V(dry)`
 ** wet_value = `CTRL + V(wet)`
@@ -114,6 +117,4 @@ Here is what each variable represents:
 * soil.read_u16() [x]: 16-bit integer value representing current the analog voltage level of the pin
 
 
-== Headline 5
 
-== Headline 6
