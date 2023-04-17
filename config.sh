@@ -1,3 +1,0 @@
-SLIDES=true
-INPUTPATH=docs
-OUTPUTPATH=dist
