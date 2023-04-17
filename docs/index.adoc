@@ -11,10 +11,9 @@ Stevan Vlajic
 
 == COMPONENTS 🦴
 
-
 === RASPBERRY PI PICO W
 
-image:./img/bootsel.png[300, 200]
+image:../img/bootsel.png[300, 200]
 
 :tip-caption: pass:[💸]
 [TIP]
@@ -22,7 +21,7 @@ https://www.raspberrypi.com/products/raspberry-pi-pico/[RASPBERRY PI PICO W] | G
 
 
 === CAPACATIVE-SOIL-SENSOR 1.2V
-image:./img/soil.png[300, 200]
+image:../img/soil.png[300, 200]
 
 :tip-caption: pass:[💸]
 [TIP]
