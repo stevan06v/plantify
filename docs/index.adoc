@@ -1,7 +1,7 @@
 = 🌵 CAPACITIVE-SOIL-PICO 🌵
 Stevan Vlajic
 1.0.0, {docdate}: My-Projects
-//:toc-placement!:  // prevents the generation of the doc at this position, so it can be printed afterwards
+//:toc-placement!:  // prevents the generation of the doc at this position, so it can be printed afterward
 :sourcedir: ../src/main/java
 :icons: font
 :sectnums:    // Nummerierung der Überschriften / section numbering
@@ -13,7 +13,7 @@ Stevan Vlajic
 
 === RASPBERRY PI PICO W
 
-image:../img/bootsel.png[300, 200]
+image:./img/bootsel.png[300, 200]
 
 :tip-caption: pass:[💸]
 [TIP]
@@ -21,7 +21,7 @@ https://www.raspberrypi.com/products/raspberry-pi-pico/[RASPBERRY PI PICO W] | G
 
 
 === CAPACATIVE-SOIL-SENSOR 1.2V
-image:../img/soil.png[300, 200]
+image:./img/soil.png[300, 200]
 
 :tip-caption: pass:[💸]
 [TIP]
