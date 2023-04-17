@@ -39,11 +39,11 @@ https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.htm
 == SETUP 🤖 
 
 === PINOUT 
-image:./img/pinout.png[]
+image:./img/pinout.png[400, 300]
 
 === CONNECTED PINS
 
-image:./img/pinned.jpg[]
+image:./img/pinned.jpg[400, 300]
 
 === WHAT TO DO
 
