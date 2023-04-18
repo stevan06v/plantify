@@ -10,7 +10,9 @@ Stevan Vlajic
 
 
 == TECHNOLOGIES ⚙️
-
+image:./img/python-dark.svg[50,50]
+image:./img/raspberrypi-dark.svg[50,50]
+image:./img/electronics.svg[50,50]
 
 == COMPONENTS 🦴
 
