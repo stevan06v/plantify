@@ -3,12 +3,22 @@ from machine import Pin, ADC
 import time
 import uasyncio
 import uos
+import network
+import json
 
-
-# init
+# define
+configFile = 'config.json'
 calibrationFile = 'capacitive-soil-sensor-calibration.csv'
 dryMoisture = 0
 wetMoisture = 65535
+wlan = network.WLAN(network.STA_IF)
+
+# define wlan settings
+ssid = ""
+psk = ""
+server = ""
+port = 0
+
 
 print("Initializing the (dht11) sensor...")
 dht11 = dht.DHT11(Pin(4))
@@ -19,15 +29,38 @@ soil = ADC(Pin(26))
 
 print("(capacitive-soil-sensor) Calibrating min/max values...")
 
-def checkIfCalibrationExits():
+def readConfigJson():
+    global ssid,psk,server,port
     try:
-        stat = uos.stat(calibrationFile)
-        print("File '{}' exists.".format(calibrationFile))
+        with open(configFile) as config:
+            data = json.load(config)
+            print(data)
+    
+        # dumps the json object into an element
+        json_str = json.dumps(data)
+
+        # load the json to a string
+        config = json.loads(json_str)
+
+        # init wlan-connection
+        ssid = config['ssid']
+        psk = config['psk']
+        server = config['server']
+        port = config['port']
+        
+        
+    except Exception as err:
+        print("config.json is missing ",err)
+
+def checkIfFileExits(file):
+    try:
+        stat = uos.stat(file)
+        print("File '{}' exists.".format(file))
         print("File size: {} bytes".format(stat[6]))
         return True
     except OSError as e:
         if e.args[0] == 2:  
-            print("File '{}' does not exist.".format(calibrationFile))
+            print("File '{}' does not exist.".format(file))
         else:
             print("An error occurred while checking file existence:", e)
         return False
@@ -57,8 +90,40 @@ def writeCalibrationValues(dry, wet):
 
     print("capacitive-soil-sensor-calibration '{}' has been written successfully.".format(calibrationFile))
 
+
+def wlanConnection(ssid, psk):
+    print("-----------------------------------------------------")
+    print("Validating config.json...")
+    wlan.active(True)
+    if psk != "" or ssid !="":
+        print(ssid + ": " + psk)
+        wlan.connect(ssid, psk)
+        print(wlan.isconnected())
+    else:
+        print("Invalid config.json")
+    print("-----------------------------------------------------")
+
+
+
+if checkIfFileExits(configFile) is True:
+    print("=====================================================")
+    
+    # init wlan-vars
+    readConfigJson()
+    
+    
+    wlanConnection(ssid,psk) 
+    while wlan.isconnected() == False:
+        print("Trying to connect to: " + ssid + "...")
+        wlanConnection(ssid, psk)
+        time.sleep(3)
+    print("Successfully connected to (" + ssid + ")!")
+    
+    print("=====================================================")
+
+
 # calibrating the capacitive soil-sensor
-if checkIfCalibrationExits() is True:
+if checkIfFileExits(calibrationFile) is True:
     print("=====================================================")
     print("No calibration neccessary. Reading calibrated values...")
     dry_moisture = 0
@@ -158,8 +223,8 @@ async def main():
     while True:
         uasyncio.create_task(readDHT11Values(0))
         uasyncio.create_task(readCapacitiveSoilValues(0))
+        
         await uasyncio.sleep_ms(10_000)
     
 uasyncio.run(main())
-
 
