@@ -48,6 +48,7 @@ def readSoilSensorValues():
         time.sleep(1)
     return vals
 
+
 def writeCalibrationValues(dry, wet):
     # Open the CSV file for writing
     with open(calibrationFile, 'w') as file:
@@ -56,10 +57,29 @@ def writeCalibrationValues(dry, wet):
 
     print("capacitive-soil-sensor-calibration '{}' has been written successfully.".format(calibrationFile))
 
-
+# calibrating the capacitive soil-sensor
 if checkIfCalibrationExits() is True:
+    print("=====================================================")
     print("No calibration neccessary. Reading calibrated values...")
-    
+    dry_moisture = 0
+    wet_moisture = 0
+
+    with open(calibrationFile, 'r') as file:
+        lines = file.readlines()
+
+        for line in lines:
+            columns = line.strip().split(',')
+
+            if len(columns) == 2:
+                dry_moisture = int(columns[0])
+                wet_moisture = int(columns[1])
+                break  
+
+    print("Dry Moisture Level:", dry_moisture)
+    print("Wet Moisture Level:", wet_moisture)
+    print("=====================================================")
+    dryMoisture = dry_moisture
+    wetMoisture = wet_moisture
     
 else:
     print("Hi, you are now calibrating the sensor!")
