@@ -1,11 +1,18 @@
 import dht
-from machine import Pin, ADC
+from machine import Pin, ADC, I2C
 import time
 import uasyncio
 import uos
 import network
 import json
 import gc
+import urequests
+import ssd1306
+
+# oled display
+i2c = I2C(0, sda=Pin(16), scl=Pin(17))
+display = ssd1306.SSD1306_I2C(128, 64, i2c)
+
 
 # garbage collector enabled
 gc.enable()
@@ -22,6 +29,10 @@ ssid = ""
 psk = ""
 server = ""
 port = 0
+
+# define extras
+yearBefore = "0000"
+timeBefore = "00:00"
 
 
 print("Initializing the (dht11) sensor...")
@@ -109,13 +120,68 @@ def wlanConnection(ssid, psk):
     print("-----------------------------------------------------")
 
 
+def currentTimestampRequest():
+    try:
+        response = urequests.get("http://worldtimeapi.org/api/ip")
+        current_time = response.json()["datetime"]
+        response.close()
+        return current_time
+    except Exception as err:
+        print("(oled) Time-api request failed...")
+        raise err
+        
+
+def getCurrentTime():
+    global timeBefore
+    try:
+        current_time = currentTimestampRequest()
+        
+        time_parts = current_time.split("T")[1].split(":")[:2]  
+        formatted_time = ":".join(time_parts)
+        
+        # safe time to display something
+        timeBefore = formatted_time
+        
+        return formatted_time
+    except Exception as err:
+        return timeBefore
+
+def getCurrentYear():
+    global yearBefore
+    try:
+        current_time = currentTimestampRequest()
+        current_year = current_time[:4]
+        
+        yearBefore = current_year
+        
+        return current_year
+    except Exception as err:
+        return yearBefore
+    
+async def updateCurrentYear(sleepTime):
+    while True:
+        current_year = getCurrentYear()
+        
+        display.text(current_year, 0, 0)
+        display.show()
+        await uasyncio.sleep_ms(sleepTime)
+    
+async def updateCurrentTime(sleepTime):
+    while True:
+        current_time = getCurrentTime()
+        
+        display.text(current_time, 85, 0)
+        display.show()
+        await uasyncio.sleep_ms(sleepTime)
+
+
+        
 
 if checkIfFileExits(configFile) is True:
     print("=====================================================")
     
     # init wlan-vars
     readConfigJson()
-    
     
     wlanConnection(ssid,psk) 
     while wlan.isconnected() == False:
@@ -225,11 +291,17 @@ async def readCapacitiveSoilValues(sleepTime):
 
 
 async def main():
+    
     while True:
         uasyncio.create_task(readDHT11Values(0))
         uasyncio.create_task(readCapacitiveSoilValues(0))
         
-        await uasyncio.sleep_ms(10_000)
+        uasyncio.create_task(updateCurrentTime(5000))
+        uasyncio.create_task(updateCurrentYear(5000))
     
+        await uasyncio.sleep_ms(5000)
+        display.fill(0)
+        
 uasyncio.run(main())
+
 
