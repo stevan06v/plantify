@@ -5,6 +5,10 @@ import uasyncio
 import uos
 import network
 import json
+import gc
+
+# garbage collector enabled
+gc.enable()
 
 # define
 configFile = 'config.json'
@@ -136,8 +140,8 @@ if checkIfFileExits(calibrationFile) is True:
             columns = line.strip().split(',')
 
             if len(columns) == 2:
-                dry_moisture = int(columns[0])
-                wet_moisture = int(columns[1])
+                dry_moisture = int(columns[1])
+                wet_moisture = int(columns[0])
                 break  
 
     print("Dry Moisture Level:", dry_moisture)
@@ -169,7 +173,6 @@ else:
         
     wetMoisture = calculateAverage(vals)
     
-    
     print("=====================================================")
     print("Dry the capacitive-soil-sensor and put it into dry soil.")
     print("=====================================================")
@@ -185,7 +188,8 @@ else:
     vals = readSoilSensorValues()
     dryMoisture = calculateAverage(vals)
     
-    writeCalibrationValues(wetMoisture, dryMoisture)
+    # dryMoisture wetMoisture
+    writeCalibrationValues(dryMoisture, wetMoisture)
     
     print("=====================================================")
     print("Capacitive-soil-sensor got calibrated successfully.")
