@@ -77,10 +77,11 @@ def calculateAverage(vals):
 
 def readSoilSensorValues():
     count = 1
+    secs = 30
     vals = []
-    while count <= 15:
+    while count <= secs:
         vals.append(soil.read_u16())
-        print(str(15 - count) + "sec remaining...");
+        print(str(secs - count) + "sec remaining...");
         count = count + 1
         time.sleep(1)
     return vals
