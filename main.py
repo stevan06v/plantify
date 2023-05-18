@@ -9,6 +9,11 @@ import gc
 import urequests
 import ssd1306
 
+# main
+moisture = 0.0
+humidity = 0.0
+temperature = 0.0
+
 # oled display
 i2c = I2C(0, sda=Pin(16), scl=Pin(17))
 display = ssd1306.SSD1306_I2C(128, 64, i2c)
@@ -305,20 +310,38 @@ def getMoistureValue():
     
 # update display  
 def updateTemeperatureValue():
+    global temperature
     temperature = getTemperatureValue()
     print("Temperature: {}°C".format(temperature))
     display.text("Temperature: {}C".format(temperature), 0, 20)        
     
 def updateHumidityValue():
+    global humidity
     humidity = getHumidityValue()
     print("Humidty: {}%".format(humidity))
     display.text("Humidty: {}%".format(humidity), 0, 35)
 
-  
 def updateMoistureValue():
+    global mositure
     mositure = getMoistureValue()
     print("Moisture: {}%".format(mositure))
     display.text("Moisture: {}%".format(mositure), 0, 50)
+    
+def sendSensorData(temperature, humidity, moisture):
+    try:
+        data = {
+            "temperature": temperature,
+            "humidity": humidity,
+            "moisture": moisture
+        }
+        headers = {'Content-Type': 'application/json'}
+        response = urequests.post("http://{}:{}/plantify".format(server, port), json=data, headers=headers)
+        print("Sensor data sent successfully.")
+        response.close()
+    except Exception as err:
+        print("Failed to send sensor data:", err)
+
+
 
 # main loop
 while True:
@@ -339,6 +362,8 @@ while True:
     # update moisture values
     updateMoistureValue()
     
-
+    # send data to client
+    sendSensorData(temperature, humidity, moisture)
+    
     display.show()
     time.sleep(3)
