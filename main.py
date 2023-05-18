@@ -13,11 +13,13 @@ import ssd1306
 i2c = I2C(0, sda=Pin(16), scl=Pin(17))
 display = ssd1306.SSD1306_I2C(128, 64, i2c)
 
+displayWidth = display.width
+displayHeight = display.height
 
 # garbage collector enabled
 gc.enable()
 
-# define
+# define 
 configFile = 'config.json'
 calibrationFile = 'capacitive-soil-sensor-calibration.csv'
 dryMoisture = 0
@@ -33,6 +35,9 @@ port = 0
 # define extras
 yearBefore = "0000"
 timeBefore = "00:00"
+temperatureBefore = 0
+humidityBefore = 0
+moistureBefore = 0
 
 
 print("Initializing the (dht11) sensor...")
@@ -130,7 +135,7 @@ def currentTimestampRequest():
         print("(oled) Time-api request failed...")
         raise err
         
-
+# api time request
 def getCurrentTime():
     global timeBefore
     try:
@@ -146,6 +151,7 @@ def getCurrentTime():
     except Exception as err:
         return timeBefore
 
+# convert time-response
 def getCurrentYear():
     global yearBefore
     try:
@@ -157,25 +163,17 @@ def getCurrentYear():
         return current_year
     except Exception as err:
         return yearBefore
-    
-async def updateCurrentYear(sleepTime):
-    while True:
-        current_year = getCurrentYear()
-        
-        display.text(current_year, 0, 0)
-        display.show()
-        await uasyncio.sleep_ms(sleepTime)
-    
-async def updateCurrentTime(sleepTime):
-    while True:
-        current_time = getCurrentTime()
-        
-        display.text(current_time, 85, 0)
-        display.show()
-        await uasyncio.sleep_ms(sleepTime)
+  
+# update display
+def updateCurrentYear():
+    current_year = getCurrentYear()
+    display.text(current_year, 0, 0)
+       
+def updateCurrentTime():
+    current_time = getCurrentTime()
+    display.text(current_time, 85, 0)
 
 
-        
 
 if checkIfFileExits(configFile) is True:
     print("=====================================================")
@@ -263,45 +261,84 @@ else:
     print("=====================================================")
     
     
-async def readDHT11Values(sleepTime):
-    while True:
-        try:
-            print("(dht11) measuring...")
-            # wait every time before reading the values to prevent reading-errors 
-            time.sleep(1)
-            dht11.measure() 
-        except Exception as err:
-            print("(dht11) Error occurred while measuring the tempreature and the humidity: ", err)
+# sensor readings
+def getTemperatureValue():
+    global temperatureBefore
+    # temperature & humidity sensor 
+    try:
+        print("(dht11) measuring...")
+        dht11.measure()
         temperature = dht11.temperature()
+        
+        # save value before current value
+        temperatureBefore = temperature
+        
+        return temperature
+    except Exception as err:
+        return temperatureBefore
+
+def getHumidityValue():
+    global humidityBefore
+    # temperature & humidity sensor 
+    try:
+        print("(dht11) measuring...")
+        dht11.measure()
         humidity = dht11.humidity()
         
-        print("(dht11) Temperature: {}°C".format(temperature))
-        print("(dht11) Humidity: {}%".format(humidity))
-        print("=====================================================")
-        await uasyncio.sleep_ms(sleepTime)
-
-async def readCapacitiveSoilValues(sleepTime):
-    while True:
+        # save value before current value
+        humidityBefore = humidity
+        
+        return humidity
+    except Exception as err:
+        return humidityBefore
+    
+def getMoistureValue():
+    global moistureBefore
+    try:
         # read moisture value and convert to percentage into the calibration range
         moisture = (wetMoisture-soil.read_u16())*100/(wetMoisture-dryMoisture)
-        # print values
-        print("(capacitive-soil-sensor) Moisture: " + "%.2f" % moisture +"% (adc: "+str(soil.read_u16())+")")
-        print("=====================================================")
-        await uasyncio.sleep_ms(sleepTime)
-
-
-async def main():
+        moistureBefore = moisture
+        return moisture
+    except Exception as err:
+        return moistureBefore
     
-    while True:
-        uasyncio.create_task(readDHT11Values(0))
-        uasyncio.create_task(readCapacitiveSoilValues(0))
-        
-        uasyncio.create_task(updateCurrentTime(5000))
-        uasyncio.create_task(updateCurrentYear(5000))
     
-        await uasyncio.sleep_ms(5000)
-        display.fill(0)
-        
-uasyncio.run(main())
+# update display  
+def updateTemeperatureValue():
+    temperature = getTemperatureValue()
+    print("Temperature: {}°C".format(temperature))
+    display.text("Temperature: {}C".format(temperature), 0, 20)        
+    
+def updateHumidityValue():
+    humidity = getHumidityValue()
+    print("Humidty: {}%".format(humidity))
+    display.text("Humidty: {}%".format(humidity), 0, 35)
 
+  
+def updateMoistureValue():
+    mositure = getMoistureValue()
+    print("Moisture: {}%".format(mositure))
+    display.text("Moisture: {}%".format(mositure), 0, 50)
 
+# main loop
+while True:
+    # clear the display
+    display.fill(0)
+    
+    # update time
+    updateCurrentYear()
+    updateCurrentTime()
+    
+    display.hline(0, 10, displayWidth - 1, 1)
+    
+    # update dht11-values
+    updateTemeperatureValue()
+    time.sleep(1)
+    updateHumidityValue()
+    
+    # update moisture values
+    updateMoistureValue()
+    
+
+    display.show()
+    time.sleep(3)
