@@ -8,6 +8,9 @@ import json
 import gc
 import urequests
 import ssd1306
+from microdot import Microdot, Response
+from microdot_cors import CORS
+
 
 # main
 moisture = 0.0
@@ -30,6 +33,7 @@ calibrationFile = 'capacitive-soil-sensor-calibration.csv'
 dryMoisture = 0
 wetMoisture = 65535
 wlan = network.WLAN(network.STA_IF)
+
 
 # define wlan settings
 ssid = ""
@@ -124,6 +128,7 @@ def wlanConnection(ssid, psk):
     if psk != "" or ssid !="":
         print(ssid + ": " + psk)
         wlan.connect(ssid, psk)
+        
         print(wlan.isconnected())
     else:
         print("Invalid config.json")
@@ -191,7 +196,11 @@ if checkIfFileExits(configFile) is True:
         print("Trying to connect to: " + ssid + "...")
         wlanConnection(ssid, psk)
         time.sleep(3)
+        
+    print(wlan.ifconfig())    
     print("Successfully connected to (" + ssid + ")!")
+    
+    print(wlan.ifconfig())    
     
     print("=====================================================")
 
@@ -281,33 +290,7 @@ def getTemperatureValue():
         return temperature
     except Exception as err:
         return temperatureBefore
-
-def getHumidityValue():
-    global humidityBefore
-    # temperature & humidity sensor 
-    try:
-        print("(dht11) measuring...")
-        dht11.measure()
-        humidity = dht11.humidity()
-        
-        # save value before current value
-        humidityBefore = humidity
-        
-        return humidity
-    except Exception as err:
-        return humidityBefore
-    
-def getMoistureValue():
-    global moistureBefore
-    try:
-        # read moisture value and convert to percentage into the calibration range
-        moisture = (wetMoisture-soil.read_u16())*100/(wetMoisture-dryMoisture)
-        moistureBefore = moisture
-        return moisture
-    except Exception as err:
-        return moistureBefore
-    
-    
+ 
 # update display  
 def updateTemeperatureValue():
     global temperature
@@ -322,26 +305,66 @@ def updateHumidityValue():
     display.text("Humidty: {}%".format(humidity), 0, 35)
 
 def updateMoistureValue():
-    global mositure
-    mositure = getMoistureValue()
+    global moisture
+    moisture = getMoistureValue()
     print("Moisture: {}%".format(mositure))
     display.text("Moisture: {}%".format(mositure), 0, 50)
     
-def sendSensorData(temperature, humidity, moisture):
+    
+    
+def getAllSensorValues():
+    
+    dht11.measure()
+    
+    humidity = dht11.humidity()
+    temperature = dht11.temperature()
+    
+    data = {
+        "temperature": temperature,
+        "humidity": humidity,
+        "moisture": getMoistureValue()
+    }
+    
+    dataString = json.dumps(data)
+    print(dataString)
+    
+    return dataString
+    
+
+
+# Setup web server
+app = Microdot()
+
+cors = CORS(app, allowed_origins=['http://localhost'], handle_cors=True, allowed_methods=['GET', 'POST'])
+
+def add_cors_headers(request, response):
+    origin = request.headers.get('Origin')
+    if origin in ['http://localhost']:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST'
+        response.headers['Access-Control-Allow-Headers'] = '*'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Max-Age'] = '3600'
+
+
+@app.route('/plantify')
+def hello(request):
+    response = Response(getAllSensorValues())
+    add_cors_headers(request, response)
+    
+    return response
+
+
+
+
+def start_server():
+    print('Starting microdot app')
     try:
-        data = {
-            "temperature": temperature,
-            "humidity": humidity,
-            "moisture": moisture
-        }
-        headers = {'Content-Type': 'application/json'}
-        response = urequests.post("http://{}:{}/plantify".format(server, port), json=data, headers=headers)
-        print("Sensor data sent successfully.")
-        response.close()
-    except Exception as err:
-        print("Failed to send sensor data:", err)
-
-
+        app.run(port=80)
+    except:
+        app.shutdown()
+        
+start_server()  
 
 # main loop
 while True:
@@ -361,9 +384,6 @@ while True:
     
     # update moisture values
     updateMoistureValue()
-    
-    # send data to client
-    sendSensorData(temperature, humidity, moisture)
     
     display.show()
     time.sleep(3)
