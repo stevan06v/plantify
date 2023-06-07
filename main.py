@@ -22,6 +22,8 @@ temperature = 0.0
 i2c = I2C(0, sda=Pin(16), scl=Pin(17))
 display = ssd1306.SSD1306_I2C(128, 64, i2c)
 
+
+
 displayWidth = display.width
 displayHeight = display.height
 
@@ -275,8 +277,6 @@ def getCurrentYear():
         return yearBefore
      
 
-
-
 # sensor reading functions
 def getTemperatureValue():
     global temperatureBefore
@@ -340,33 +340,31 @@ def updateMoistureValue(moisture):
     print("Moisture: {}%".format(moisture))
     display.text("Moisture: {}%".format(moisture), 0, 50)
     
-async def updateDisplay():
-    while True:
-        # measure function
-        dht11.measure()
+def updateDisplay():
+    
+    # measure function
+    dht11.measure()
+    
+    # initialize
+    humidity = dht11.humidity()
+    temperature = dht11.temperature()
+    moisture = getMoistureValue()
+    
+    # clear the display
+    display.fill(0)
+    
+    # show sensor-readings
+    updateTemeperatureValue(temperature)
+    updateHumidityValue(humidity)
+    updateMoistureValue(moisture)
+    
+    # time-api calls
+    updateCurrentYear()
+    updateCurrentTime()
         
-        # initialize
-        humidity = dht11.humidity()
-        temperature = dht11.temperature()
-        moisture = getMoistureValue()
+    display.show()
         
-        
-        # clear the display
-        display.fill(0)
-        
-        # show sensor-readings
-        updateTemeperatureValue(temperature)
-        updateHumidityValue(humidity)
-        updateMoistureValue(moisture)
-        
-        # time-api calls
-        updateCurrentYear()
-        updateCurrentTime()
-        
-        display.show()
-        
-        await uasyncio.sleep_ms(1000)
-        
+      
             
 # to JSON-string functions    
 def getAllSensorValuesAsJsonString():
@@ -378,13 +376,13 @@ def getAllSensorValuesAsJsonString():
     humidity = dht11.humidity()
     temperature = dht11.temperature()
     moisture = getMoistureValue()
-   # timestamp = currentTimestampRequest()
+    timestamp = currentTimestampRequest()
     
     data = {
         "temperature": temperature,
         "humidity": humidity,
-        "moisture": moisture #,
-        #"timestamp": timestamp,
+        "moisture": moisture ,
+        "timestamp": timestamp,
     }
     
     dataString = json.dumps(data)
@@ -480,10 +478,17 @@ def moisture(request):
     moisture = getMoistureValue()
     
     response = Response(getMoistureValueAsJsonString(moisture))
+    
     add_cors_headers(request, response)
     
     return response
 
+@app.route('/updateDisplay')
+def display(request):
+    
+    updateDisplay()
+    
+    return 'OK'
 
 
 def start_server():
@@ -492,6 +497,7 @@ def start_server():
         app.run(port=80)
     except:
         app.shutdown()
-        
+
+
 start_server()
 
