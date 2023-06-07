@@ -10,6 +10,7 @@ import urequests
 import ssd1306
 from microdot import Microdot, Response
 from microdot_cors import CORS
+import uasyncio as asyncio
 
 
 # main
@@ -135,56 +136,6 @@ def wlanConnection(ssid, psk):
     print("-----------------------------------------------------")
 
 
-def currentTimestampRequest():
-    try:
-        response = urequests.get("http://worldtimeapi.org/api/ip")
-        current_time = response.json()["datetime"]
-        response.close()
-        return current_time
-    except Exception as err:
-        print("(oled) Time-api request failed...")
-        raise err
-        
-# api time request
-def getCurrentTime():
-    global timeBefore
-    try:
-        current_time = currentTimestampRequest()
-        
-        time_parts = current_time.split("T")[1].split(":")[:2]  
-        formatted_time = ":".join(time_parts)
-        
-        # safe time to display something
-        timeBefore = formatted_time
-        
-        return formatted_time
-    except Exception as err:
-        return timeBefore
-
-# convert time-response
-def getCurrentYear():
-    global yearBefore
-    try:
-        current_time = currentTimestampRequest()
-        current_year = current_time[:4]
-        
-        yearBefore = current_year
-        
-        return current_year
-    except Exception as err:
-        return yearBefore
-  
-# update display
-def updateCurrentYear():
-    current_year = getCurrentYear()
-    display.text(current_year, 0, 0)
-       
-def updateCurrentTime():
-    current_time = getCurrentTime()
-    display.text(current_time, 85, 0)
-
-
-
 if checkIfFileExits(configFile) is True:
     print("=====================================================")
     
@@ -274,8 +225,59 @@ else:
     print("Capacitive-soil-sensor got calibrated successfully.")
     print("=====================================================")
     
+timeStampBefore = "2023-06-06T00:04:44.249789+02:00"
+
+# time-api stuff
+def currentTimestampRequest():
+    global timeStampBefore
     
-# sensor readings
+    try:
+        response = urequests.get("http://worldtimeapi.org/api/ip")
+        current_time = response.json()["datetime"]
+        response.close()
+        
+        # save to prevent exceptions
+        timeStampBefore = current_time
+        
+        return timeStampBefore
+    
+    except Exception as err:
+        print("(oled) Time-api request failed...")
+        return timeStampBefore
+        
+        
+# time api functions
+def getCurrentTime():
+    global timeBefore
+ 
+    current_time = currentTimestampRequest()
+    
+    time_parts = current_time.split("T")[1].split(":")[:2]  
+    formatted_time = ":".join(time_parts)
+    
+    # safe time to display something
+    timeBefore = formatted_time
+    
+    return formatted_time
+   
+
+# convert time-response
+def getCurrentYear():
+    global yearBefore
+    try:
+        current_time = currentTimestampRequest()
+        current_year = current_time[:4]
+        
+        yearBefore = current_year
+        
+        return current_year
+    except Exception as err:
+        return yearBefore
+     
+
+
+
+# sensor reading functions
 def getTemperatureValue():
     global temperatureBefore
     # temperature & humidity sensor 
@@ -290,50 +292,134 @@ def getTemperatureValue():
         return temperature
     except Exception as err:
         return temperatureBefore
- 
-# update display  
-def updateTemeperatureValue():
-    global temperature
-    temperature = getTemperatureValue()
+
+def getHumidityValue():
+    global humidityBefore
+    # temperature & humidity sensor 
+    try:
+        print("(dht11) measuring...")
+        dht11.measure()
+        humidity = dht11.humidity()
+        
+        # save value before current value
+        humidityBefore = humidity
+        
+        return humidity
+    except Exception as err:
+        return humidityBefore
+    
+def getMoistureValue():
+    global moistureBefore
+    try:
+        # read moisture value and convert to percentage into the calibration range
+        moisture = (wetMoisture-soil.read_u16())*100/(wetMoisture-dryMoisture)
+        moistureBefore = moisture
+        return moisture
+    except Exception as err:
+        return moistureBefore
+    
+    
+# update display functions
+def updateCurrentYear():
+    current_year = getCurrentYear()
+    display.text(current_year, 0, 0)
+       
+def updateCurrentTime():
+    current_time = getCurrentTime()
+    display.text(current_time, 85, 0)
+
+def updateTemeperatureValue(temperature):
     print("Temperature: {}°C".format(temperature))
     display.text("Temperature: {}C".format(temperature), 0, 20)        
     
-def updateHumidityValue():
-    global humidity
-    humidity = getHumidityValue()
+def updateHumidityValue(humidity):
     print("Humidty: {}%".format(humidity))
     display.text("Humidty: {}%".format(humidity), 0, 35)
 
-def updateMoistureValue():
-    global moisture
-    moisture = getMoistureValue()
-    print("Moisture: {}%".format(mositure))
-    display.text("Moisture: {}%".format(mositure), 0, 50)
+def updateMoistureValue(moisture):
+    print("Moisture: {}%".format(moisture))
+    display.text("Moisture: {}%".format(moisture), 0, 50)
     
+async def updateDisplay():
+    while True:
+        # measure function
+        dht11.measure()
+        
+        # initialize
+        humidity = dht11.humidity()
+        temperature = dht11.temperature()
+        moisture = getMoistureValue()
+        
+        
+        # clear the display
+        display.fill(0)
+        
+        # show sensor-readings
+        updateTemeperatureValue(temperature)
+        updateHumidityValue(humidity)
+        updateMoistureValue(moisture)
+        
+        # time-api calls
+        updateCurrentYear()
+        updateCurrentTime()
+        
+        display.show()
+        
+        await uasyncio.sleep_ms(1000)
+        
+            
+# to JSON-string functions    
+def getAllSensorValuesAsJsonString():
     
-    
-def getAllSensorValues():
-    
+    # measure function
     dht11.measure()
     
+    # initialize
     humidity = dht11.humidity()
     temperature = dht11.temperature()
+    moisture = getMoistureValue()
+   # timestamp = currentTimestampRequest()
     
     data = {
         "temperature": temperature,
         "humidity": humidity,
-        "moisture": getMoistureValue()
+        "moisture": moisture #,
+        #"timestamp": timestamp,
     }
     
     dataString = json.dumps(data)
-    print(dataString)
+    
+    # update the display
+    # updateDisplay(temperature, humidity, moisture)
     
     return dataString
     
 
+def getHumidityValueAsJsonString(humidity):
+    data = {
+        "humidity": humidity, 
+    }
+    dataString = json.dumps(data)
+    return dataString
 
+def getTemperatureValueAsJsonString(temperature):
+    data = {
+        "temperature": temperature, 
+    }
+    dataString = json.dumps(data)
+    return dataString
+    
+def getMoistureValueAsJsonString(moisture):
+    data = {
+        "moisture": moisture, 
+    }
+    dataString = json.dumps(data)
+    return dataString
+          
+    
 # Setup web server
 app = Microdot()
+
 
 cors = CORS(app, allowed_origins=['http://localhost'], handle_cors=True, allowed_methods=['GET', 'POST'])
 
@@ -348,12 +434,55 @@ def add_cors_headers(request, response):
 
 
 @app.route('/plantify')
-def hello(request):
-    response = Response(getAllSensorValues())
+def plantify(request):
+    
+    data = getAllSensorValuesAsJsonString()
+    
+    response = Response(data)
+    
+    add_cors_headers(request, response)
+    
+    # call a display function
+    # uasyncio.create_task(updateDisplay())
+    
+    print(data)
+    
+    return response
+
+
+@app.route('/humidity')
+def humidity(request):
+    
+    # read humidity
+    humidity = getHumidityValue()
+    
+    response = Response(getHumidityValueAsJsonString(humidity))
     add_cors_headers(request, response)
     
     return response
 
+
+@app.route('/temperature')
+def temperature(request):
+    
+    # read humidity
+    temperature = getTemperatureValue()
+    
+    response = Response(getTemperatureValueAsJsonString(temperature))
+    add_cors_headers(request, response)
+    
+    return response
+
+@app.route('/moisture')
+def moisture(request):
+    
+    # read humidity
+    moisture = getMoistureValue()
+    
+    response = Response(getMoistureValueAsJsonString(moisture))
+    add_cors_headers(request, response)
+    
+    return response
 
 
 
@@ -364,26 +493,5 @@ def start_server():
     except:
         app.shutdown()
         
-start_server()  
+start_server()
 
-# main loop
-while True:
-    # clear the display
-    display.fill(0)
-    
-    # update time
-    updateCurrentYear()
-    updateCurrentTime()
-    
-    display.hline(0, 10, displayWidth - 1, 1)
-    
-    # update dht11-values
-    updateTemeperatureValue()
-    time.sleep(1)
-    updateHumidityValue()
-    
-    # update moisture values
-    updateMoistureValue()
-    
-    display.show()
-    time.sleep(3)
