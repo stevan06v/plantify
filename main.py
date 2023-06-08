@@ -153,7 +153,15 @@ if checkIfFileExits(configFile) is True:
     print(wlan.ifconfig())    
     print("Successfully connected to (" + ssid + ")!")
     
-    print(wlan.ifconfig())    
+    display.text("IP:", 0, 5)
+    display.text(str(wlan.ifconfig()[0]), 0, 15)
+    display.text("/plantify", 0, 25)
+    display.text("/humidity", 0, 35)
+    display.text("/temperature", 0, 45)
+    display.text("/moisture", 0, 55)
+
+    display.show()
+    
     
     print("=====================================================")
 
@@ -391,7 +399,24 @@ def getAllSensorValuesAsJsonString():
     # updateDisplay(temperature, humidity, moisture)
     
     return dataString
+
+def getDHT11ValuesAsJsonString():    
+    # measure function
+    dht11.measure()
     
+    # initialize
+    humidity = dht11.humidity()
+    temperature = dht11.temperature()
+
+    data = {
+        "temperature": temperature,
+        "humidity": humidity 
+    }
+    
+    dataString = json.dumps(data)
+    
+    return dataString    
+
 
 def getHumidityValueAsJsonString(humidity):
     data = {
@@ -413,13 +438,10 @@ def getMoistureValueAsJsonString(moisture):
     }
     dataString = json.dumps(data)
     return dataString
-          
-    
+
 # Setup web server
 app = Microdot()
 
-
-cors = CORS(app, allowed_origins=['http://localhost'], handle_cors=True, allowed_methods=['GET', 'POST'])
 
 def add_cors_headers(request, response):
     origin = request.headers.get('Origin')
@@ -430,11 +452,26 @@ def add_cors_headers(request, response):
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Max-Age'] = '3600'
 
-
 @app.route('/plantify')
 def plantify(request):
     
     data = getAllSensorValuesAsJsonString()
+    
+    response = Response(data)
+    
+    add_cors_headers(request, response)
+    
+    # call a display function
+    # uasyncio.create_task(updateDisplay())
+    
+    print(data)
+    
+    return response
+
+@app.route('/dht11')
+def temperaturehumidity(request):
+    
+    data = getDHT11ValuesAsJsonString()
     
     response = Response(data)
     
@@ -500,4 +537,5 @@ def start_server():
 
 
 start_server()
+
 
